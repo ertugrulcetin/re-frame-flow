@@ -7,7 +7,7 @@
 
 ## Usage
 
-- Add **re-frame-flow** to dev dependencies:
+- Add re-frame-flow to **dev** dependencies:
 ```clojure
 :profiles
    {:dev
