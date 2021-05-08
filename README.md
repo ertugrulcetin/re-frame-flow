@@ -1,11 +1,11 @@
 # Re-frame Flow
 
-**re-frame-flow** is a graph based visualization tool for Re-frame event chains.
+**re-frame-flow** is a graph based visualization tool for re-frame event chains.
 
 ![Re-frame Flow](imgs/re-frame-flow-example.png)
 
 
-## Usage
+## Installation
 
 - Add re-frame-flow to **dev** dependencies:
 ```clojure
@@ -30,3 +30,9 @@
   (re-flow/clear-cache!)
   ...)
 ```
+
+## Usage
+- Make sure you have followed all of the installation instructions above.
+- Start up your application.
+- Once it is loaded, trigger some events (flow is updated when an event is triggered).
+- Focus the document window and press **ctrl-g** to open the flow panel.
