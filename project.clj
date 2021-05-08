@@ -1,12 +1,12 @@
 (defproject re-frame-flow "0.1.0"
-  :description "Visualization tool for Re-frame event chain"
+  :description "Graph based visualization tool for Re-frame event chains"
 
   :author "Ertuğrul Çetin"
 
-  :url "http://example.com/FIXME"
+  :url "https://github.com/ertugrulcetin/re-frame-flow"
 
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :license {:name "MIT License"
+            :url  "https://opensource.org/licenses/MIT"}
 
   :dependencies [[thheller/shadow-cljs "2.12.5"]]
 
