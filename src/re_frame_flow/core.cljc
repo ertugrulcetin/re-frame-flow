@@ -57,7 +57,7 @@
     (name id)))
 
 
-(defn id->node [id]
+(defn- id->node [id]
   {:id (kw->str id)
    :style {:fontSize 14
            :fontFamily "monospace"
@@ -205,7 +205,7 @@
       name*)))
 
 
-(defn flow-panel []
+(defn- flow-panel []
   (let [handle-keys (fn [e]
                       (let [tag-name (.-tagName (.-target e))
                             entering-input? (contains? #{"INPUT" "SELECT" "TEXTAREA"} tag-name)]
@@ -268,7 +268,7 @@
                               {:color "#aaa"}]]])})))
 
 
-(defn panel-div []
+(defn- panel-div []
   (let [id "--re-frame-flow--"
         panel (js/document.getElementById id)]
     (if panel
