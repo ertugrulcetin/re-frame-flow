@@ -11,7 +11,7 @@
 ```clojure
 :profiles
    {:dev
-      {:dependencies [[re-frame-flow "X.Y.Z"]] }}
+      {:dependencies [[org.clojars.ertucetin/re-frame-flow "X.Y.Z"]] }}
 ```
 
 - Add to **preloads**:
