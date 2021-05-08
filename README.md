@@ -36,3 +36,14 @@
 - Start up your application.
 - Once it is loaded, trigger some events (Flow panel gets updated when an event is triggered).
 - Focus the document window and press **ctrl-g** to open the flow panel.
+
+## Running the example
+- `git clone git@github.com:ertugrulcetin/re-frame-flow.git`
+- `npm install`
+- `lein watch`
+- Open http://localhost:8280
+- Click `Trigger 1` button
+- Press `ctrl-g` (opens the panel)
+- Pres it again (closes the panel)
+- Click `Trigger 2` button
+- Open the panel again (you will notice new events)
