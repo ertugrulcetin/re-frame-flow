@@ -7,6 +7,8 @@
 
 ## Installation
 
+[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.ertucetin/re-frame-flow.svg)](https://clojars.org/org.clojars.ertucetin/re-frame-flow)
+
 - Add re-frame-flow to **dev** dependencies:
 ```clojure
 :profiles
