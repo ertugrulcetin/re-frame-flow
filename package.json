@@ -1,0 +1,17 @@
+{
+  "name": "re-frame-flow",
+  "scripts": {
+    "watch": "npx shadow-cljs watch app",
+    "release": "npx shadow-cljs release app",
+    "build-report": "npx shadow-cljs run shadow.cljs.build-report app target/build-report.html"
+  },
+  "devDependencies": {
+    "shadow-cljs": "2.12.5"
+  },
+  "dependencies": {
+    "dagre": "^0.8.5",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "react-flow-renderer": "^9.5.4"
+  }
+}
