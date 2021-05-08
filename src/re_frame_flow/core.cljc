@@ -1,25 +1,22 @@
 (ns re-frame-flow.core
   (:require
+   [clojure.set :as set]
    [reagent.core :as r]
    [reagent.dom :as rdom]
    [re-frame.core :as rf]
-   [re-frame.interceptor :refer [->interceptor get-effect get-coeffect]]
-   [re-frame.events :as events]
    [re-frame.cofx :as cofx]
+   [re-frame.events :as events]
    [re-frame.fx :as fx]
+   [re-frame.interceptor :refer [->interceptor get-effect get-coeffect]]
    [re-frame.registrar :as rg]
    [re-frame.std-interceptors :as std-interceptors :refer [fx-handler->interceptor]]
    [re-frame.trace :as trace :include-macros true]
-   [clojure.set :as set]
-   ["react-flow-renderer" :default ReactFlow :refer [addEdge
-                                                     Background
-                                                     Controls
-                                                     ReactFlowProvider]]
+   ["react-flow-renderer" :default ReactFlow :refer [addEdge Background Controls ReactFlowProvider]]
    ["dagre" :as dagre]))
 
 
 (def fx-handlers (atom {}))
-(def elements* (r/atom {}))
+(def id->node-map (r/atom {}))
 
 
 (defn- get-deps [result]
@@ -60,34 +57,39 @@
     (name id)))
 
 
+(defn id->node [id]
+  {:id (kw->str id)
+   :style {:fontSize 14
+           :fontFamily "monospace"
+           :wordBreak "break-word"
+           :width 200}
+   :data {:label id
+          :name (name id)
+          :namespace (namespace id)}
+   :sourcePosition "right"
+   :targetPosition "left"
+   :position {:x 0 :y 0}})
+
+
+(defn- ids->edge [id1 id2]
+  {:id (str "e-" (kw->str id1) "+" (kw->str id2))
+   :source (kw->str id1)
+   :target (kw->str id2)
+   :type "smoothstep"
+   :animated true})
+
+
 (defn- create-node-and-edges [handlers]
   (reduce-kv
     (fn [acc k v]
-      (let [nodes (map (fn [id]
-                         {:id (kw->str id)
-                          :style {:fontSize 14
-                                  :fontFamily "monospace"
-                                  :wordBreak "break-word"
-                                  :width 200}
-                          :data {:label id
-                                 :name (name id)
-                                 :namespace (namespace id)}
-                          :sourcePosition "right"
-                          :targetPosition "left"
-                          :position {:x 0 :y 0}})
-                    (cons k v))
-            edges (map (fn [id1 id2]
-                         {:id (str "e-" (kw->str id1) "+" (kw->str id2))
-                          :source (kw->str id1)
-                          :target (kw->str id2)
-                          :type "smoothstep"
-                          :animated true}) (repeat k) v)]
+      (let [nodes (map id->node (cons k v))
+            edges (map ids->edge (repeat k) v)]
         (into acc (concat nodes edges))))
     []
     handlers))
 
 
-(defn- get-elements [handlers]
+(defn- get-id->node-map [handlers]
   (let [m @rg/kind->id->handler
         fx (:fx m)
         events (:event m)]
@@ -122,7 +124,7 @@
                           (let [result (dissoc result :db)
                                 deps (get-deps result)]
                             (swap! fx-handlers update-in [id] set/union deps)
-                            (reset! elements* (get-elements @fx-handlers)))
+                            (reset! id->node-map (get-id->node-map @fx-handlers)))
                           (assoc context :effects result)))]
                   (trace/merge-trace!
                     {:tags {:effects (get-effect new-context)
@@ -143,15 +145,17 @@
                           ;; due to hot reload warning...
                           ((resolve 'fx-handler->interceptor) id handler)]))))
 
+
 (defn clear-cache! []
   (reset! fx-handlers {})
-  (reset! elements* {}))
+  (reset! id->node-map {}))
 
 ;;--------------------------------------- View component ---------------------------------------
 
 (def Graph (.. dagre -graphlib -Graph))
 (def dagre-graph (Graph.))
 (.setDefaultEdgeLabel dagre-graph #(clj->js {}))
+(.setGraph dagre-graph (clj->js {:rankdir "LR"}))
 
 
 (def react-flow-pro (r/adapt-react-class ReactFlowProvider))
@@ -160,6 +164,7 @@
 (def controls (r/adapt-react-class Controls))
 
 (defonce show-panel? (r/atom false))
+
 
 (defn- update-handles-color []
   (let [css ".react-flow__handle { background: white !important;
@@ -170,6 +175,36 @@
     (.appendChild head style)
     (.appendChild style (js/document.createTextNode css))))
 
+
+(defn- on-node-mouse-enter [hovered-node-id _ node]
+  (let [id (.-id node)
+        ns* ^String (.-data.namespace node)
+        name* ^String (.-data.name node)]
+    (reset! hovered-node-id id)
+    (swap! id->node-map
+      (fn [elements id v]
+        (-> elements
+          (assoc-in [id :data :label] v)
+          (assoc-in [id :style :zIndex] 4)))
+      id
+      (if ns*
+        (str ":" ns* "/" name*)
+        (str ":" name*)))))
+
+
+(defn- on-node-mouse-leave [hovered-node-id _ node]
+  (let [id (.-id node)
+        name* ^String (.-data.name node)]
+    (reset! hovered-node-id nil)
+    (swap! id->node-map
+      (fn [elements id v]
+        (-> elements
+          (assoc-in [id :data :label] v)
+          (assoc-in [id :style :zIndex] 3)))
+      id
+      name*)))
+
+
 (defn flow-panel []
   (let [handle-keys (fn [e]
                       (let [tag-name (.-tagName (.-target e))
@@ -179,7 +214,8 @@
                                 (.-ctrlKey e))
                           (swap! show-panel? not)
                           (.preventDefault e))))
-        hovered-node-id (r/atom nil)]
+        hovered-node-id (r/atom nil)
+        elements (r/atom [])]
     (r/create-class
       {:display-name "Flow Panel"
        :component-did-mount (fn []
@@ -187,53 +223,31 @@
                               (update-handles-color))
        :component-will-unmount (fn []
                                  (js/window.removeEventListener "keydown" handle-keys))
+       :component-will-update (fn []
+                                (let [width 280
+                                      height 36
+                                      elements* (vals @id->node-map)
+                                      _ (doseq [el elements*]
+                                          (if (:data el)
+                                            (.setNode dagre-graph (:id el) (clj->js {:width width :height height}))
+                                            (.setEdge dagre-graph (:source el) (:target el))))
+                                      _ (.layout dagre dagre-graph)
+                                      elements* (mapv
+                                                  (fn [el]
+                                                    (if (:data el)
+                                                      (let [node-with-pos (.node dagre-graph (:id el))]
+                                                        (assoc el :position {:x (+ (- (.-x node-with-pos)
+                                                                                     (/ width 2))
+                                                                                  (/ (js/Math.random) 1000))
+                                                                             :y (- (.-y node-with-pos) (/ height 2))}))
+                                                      el))
+                                                  elements*)]
+                                  (reset! elements elements*)))
        :reagent-render (fn []
-                         (let [width 280
-                               height 36
-                               _ (.setGraph dagre-graph (clj->js {:rankdir "LR"}))
-                               elements (vals @elements*)
-                               _ (doseq [el elements]
-                                   (if (:data el)
-                                     (.setNode dagre-graph (:id el) (clj->js {:width width :height height}))
-                                     (.setEdge dagre-graph (:source el) (:target el))))
-                               _ (.layout dagre dagre-graph)
-                               elements (mapv
-                                          (fn [el]
-                                            (if (:data el)
-                                              (let [node-with-pos (.node dagre-graph (:id el))]
-                                                (assoc el :position {:x (+ (- (.-x node-with-pos)
-                                                                             (/ width 2))
-                                                                          (/ (js/Math.random) 1000))
-                                                                     :y (- (.-y node-with-pos) (/ height 2))}))
-                                              el))
-                                          elements)]
-                           [react-flow-pro
+                         [react-flow-pro
                             [react-flow
-                             {:on-node-mouse-enter (fn [_ node]
-                                                     (let [id (.-id node)
-                                                           ns* ^String (.-data.namespace node)
-                                                           name* ^String (.-data.name node)]
-                                                       (reset! hovered-node-id id)
-                                                       (swap! elements*
-                                                         (fn [elements id v]
-                                                           (-> elements
-                                                             (assoc-in [id :data :label] v)
-                                                             (assoc-in [id :style :zIndex] 4)))
-                                                         id
-                                                         (if ns*
-                                                           (str ":" ns* "/" name*)
-                                                           (str ":" name*)))))
-                              :on-node-mouse-leave (fn [_ node]
-                                                     (let [id (.-id node)
-                                                           name* ^String (.-data.name node)]
-                                                       (reset! hovered-node-id nil)
-                                                       (swap! elements*
-                                                         (fn [elements id v]
-                                                           (-> elements
-                                                             (assoc-in [id :data :label] v)
-                                                             (assoc-in [id :style :zIndex] 3)))
-                                                         id
-                                                         name*)))
+                             {:on-node-mouse-enter (partial on-node-mouse-enter hovered-node-id)
+                              :on-node-mouse-leave (partial on-node-mouse-leave hovered-node-id)
                               :default-position [10 10]
                               :style {:width "100%"
                                       :height "100vh"
@@ -247,12 +261,11 @@
                               :snap-to-grid true
                               :snap-grid [15 15]
                               :elements (if @hovered-node-id
-                                          (filter #(or (:data %) (= (:source %) @hovered-node-id)) elements)
-                                          elements)}
+                                          (filter #(or (:data %) (= (:source %) @hovered-node-id)) @elements)
+                                          @elements)}
                              [controls]
                              [background
-                              {:color "#aaa"
-                               :gap 16}]]]))})))
+                              {:color "#aaa"}]]])})))
 
 
 (defn panel-div []
