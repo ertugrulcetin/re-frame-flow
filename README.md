@@ -34,5 +34,5 @@
 ## Usage
 - Make sure you have followed all of the installation instructions above.
 - Start up your application.
-- Once it is loaded, trigger some events (flow is updated when an event is triggered).
+- Once it is loaded, trigger some events (flow gets updated when an event is triggered).
 - Focus the document window and press **ctrl-g** to open the flow panel.
