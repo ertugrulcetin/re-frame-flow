@@ -13,7 +13,7 @@
  {:app {:target :browser
         :output-dir "resources/public/js/compiled"
         :asset-path "/js/compiled"
-        :modules {:app {:init-fn re-frame-flow.core/init!}}
-        :devtools {:preloads []}
+        :modules {:app {:init-fn app.core/init}}
+        :devtools {:preloads [re-frame-flow.preload]}
         :dev {:compiler-options
               {:closure-defines {}}}}}}
