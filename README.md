@@ -23,7 +23,7 @@
  ...}
 ```
 
-- Update **^:dev/after-load**:
+- Update **^:dev/after-load** (if you're not using hot-reload, you can ignore this part):
 ```clojure
 (ns my-app.core
   (:require [re-frame-flow.core :as re-flow]))
