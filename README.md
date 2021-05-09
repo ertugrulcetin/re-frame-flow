@@ -16,7 +16,7 @@
       {:dependencies [[org.clojars.ertucetin/re-frame-flow "X.Y.Z"]] }}
 ```
 
-- Add to **preloads**:
+- Add `re-frame-flow.preload` to **preloads**:
 ```clojure
 {...
  :preloads [re-frame-flow.preload]
