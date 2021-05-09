@@ -6,7 +6,7 @@
 
 
 ## Installation
-[![Clojars Project](https://clojars.org/org.clojars.ertucetin/re-frame-flow/latest-version.svg)](https://clojars.org/konva-cljs)
+[![Clojars Project](https://clojars.org/org.clojars.ertucetin/re-frame-flow/latest-version.svg)](https://clojars.org/org.clojars.ertucetin/re-frame-flow)
 
 
 - Add re-frame-flow to **dev** dependencies:
