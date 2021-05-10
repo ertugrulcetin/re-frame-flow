@@ -232,8 +232,8 @@
                            (let [tag-name        (.-tagName (.-target e))
                                  entering-input? (contains? #{"INPUT" "SELECT" "TEXTAREA"} tag-name)]
                              (when (and (not entering-input?)
-                                     (= (.-key e) "g")
-                                     (.-ctrlKey e))
+                                        (= (.-key e) "g")
+                                        (.-ctrlKey e))
                                (swap! show-panel? not)
                                (.preventDefault e))))
         hovered-node-id  (r/atom nil)
@@ -248,7 +248,8 @@
                                  (js/window.removeEventListener "keydown" handle-keys))
        :component-will-update (fn []
                                 (when (or (nil? @prev-fx-handlers)
-                                        (not= @prev-fx-handlers @fx-handlers))
+                                          (not= @prev-fx-handlers @fx-handlers))
+                                  (reset! prev-fx-handlers @fx-handlers)
                                   (update-nodes-positions elements)))
        :reagent-render (fn []
                          [react-flow-pro
