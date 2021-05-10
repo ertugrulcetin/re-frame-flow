@@ -75,7 +75,6 @@
   {:id (str "e-" (kw->str id1) "+" (kw->str id2))
    :source (kw->str id1)
    :target (kw->str id2)
-   :type "smoothstep"
    :animated true})
 
 
@@ -227,13 +226,25 @@
     (reset! elements elements*)))
 
 
+(defn- traverse-path [id]
+  (let [childs (get @fx-handlers id)]
+    (if childs
+      (cons id (mapcat traverse-path childs))
+      [id])))
+
+
+(defn- get-nested-path [hovered-node-id elements]
+  (let [sources (->> hovered-node-id (keyword) (traverse-path) (map kw->str) (set))]
+    (filter #(or (:data %) (sources (:source %))) elements)))
+
+
 (defn- flow-panel []
   (let [handle-keys      (fn [e]
                            (let [tag-name        (.-tagName (.-target e))
                                  entering-input? (contains? #{"INPUT" "SELECT" "TEXTAREA"} tag-name)]
                              (when (and (not entering-input?)
-                                        (= (.-key e) "g")
-                                        (.-ctrlKey e))
+                                     (= (.-key e) "g")
+                                     (.-ctrlKey e))
                                (swap! show-panel? not)
                                (.preventDefault e))))
         hovered-node-id  (r/atom nil)
@@ -248,7 +259,7 @@
                                  (js/window.removeEventListener "keydown" handle-keys))
        :component-will-update (fn []
                                 (when (or (nil? @prev-fx-handlers)
-                                          (not= @prev-fx-handlers @fx-handlers))
+                                        (not= @prev-fx-handlers @fx-handlers))
                                   (reset! prev-fx-handlers @fx-handlers)
                                   (update-nodes-positions elements)))
        :reagent-render (fn []
@@ -269,7 +280,7 @@
                             :snap-to-grid true
                             :snap-grid [15 15]
                             :elements (if @hovered-node-id
-                                        (filter #(or (:data %) (= (:source %) @hovered-node-id)) @elements)
+                                        (get-nested-path @hovered-node-id @elements)
                                         @elements)}
                            [controls]
                            [background
