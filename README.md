@@ -39,6 +39,10 @@
 - Once it is loaded, trigger some events (Flow panel gets updated when an event is triggered).
 - Focus the document window and press **ctrl-g** to open the flow panel.
 
+## Live Demo
+
+- [Re-frame Flow Demo](https://ertugrulcetin.github.io/re-frame-flow-demo/index.html)
+
 ## Running the example
 - `git clone git@github.com:ertugrulcetin/re-frame-flow.git`
 - `npm install`
