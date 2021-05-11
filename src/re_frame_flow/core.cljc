@@ -16,7 +16,8 @@
 
 
 (def fx-handlers (atom {}))
-(def id->node-map (r/atom {}))
+(def id->node-map (atom {}))
+(def elements (r/atom []))
 
 
 (defn- get-deps [result]
@@ -147,7 +148,8 @@
 
 (defn clear-cache! []
   (reset! fx-handlers {})
-  (reset! id->node-map {}))
+  (reset! id->node-map {})
+  (reset! elements []))
 
 ;;--------------------------------------- View component ---------------------------------------
 
@@ -248,7 +250,6 @@
                                (swap! show-panel? not)
                                (.preventDefault e))))
         hovered-node-id  (r/atom nil)
-        elements         (r/atom [])
         prev-fx-handlers (atom nil)]
     (r/create-class
       {:display-name "Flow Panel"
@@ -259,7 +260,7 @@
                                  (js/window.removeEventListener "keydown" handle-keys))
        :component-will-update (fn []
                                 (when (or (nil? @prev-fx-handlers)
-                                        (not= @prev-fx-handlers @fx-handlers))
+                                          (not= @prev-fx-handlers @fx-handlers))
                                   (reset! prev-fx-handlers @fx-handlers)
                                   (update-nodes-positions elements)))
        :reagent-render (fn []
