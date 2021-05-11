@@ -15,9 +15,8 @@
     ["dagre" :as dagre]))
 
 
-(def fx-handlers (atom {}))
-(def id->node-map (atom {}))
-(def elements (r/atom []))
+(def state* (atom {}))
+(def elements (r/atom {}))
 
 
 (defn- get-deps [result]
@@ -123,8 +122,11 @@
                               result (handler-fn coeffects event)]
                           (let [result (dissoc result :db)
                                 deps   (get-deps result)]
-                            (swap! fx-handlers update-in [id] set/union deps)
-                            (reset! id->node-map (get-id->node-map @fx-handlers)))
+                            (swap! state* (fn [state id v]
+                                            (let [state (update-in state [:handlers id] set/union v)]
+                                              (assoc state :id->node-map (get-id->node-map (:handlers state)))))
+                              id
+                              deps))
                           (assoc context :effects result)))]
                   (trace/merge-trace!
                     {:tags {:effects (get-effect new-context)
@@ -147,9 +149,8 @@
 
 
 (defn clear-cache! []
-  (reset! fx-handlers {})
-  (reset! id->node-map {})
-  (reset! elements []))
+  (reset! state* {})
+  (reset! elements {}))
 
 ;;--------------------------------------- View component ---------------------------------------
 
@@ -177,14 +178,14 @@
     (.appendChild style (js/document.createTextNode css))))
 
 
-(defn- on-node-mouse-enter [hovered-node-id _ node]
+(defn- on-node-mouse-enter [elements hovered-node-id _ node]
   (let [id    (.-id node)
         ns*   ^String (.-data.namespace node)
         name* ^String (.-data.name node)]
     (reset! hovered-node-id id)
-    (swap! id->node-map
-      (fn [elements id v]
-        (-> elements
+    (swap! elements
+      (fn [elements* id v]
+        (-> elements*
           (assoc-in [id :data :label] v)
           (assoc-in [id :style :zIndex] 4)))
       id
@@ -193,13 +194,13 @@
         (str ":" name*)))))
 
 
-(defn- on-node-mouse-leave [hovered-node-id _ node]
+(defn- on-node-mouse-leave [elements hovered-node-id _ node]
   (let [id    (.-id node)
         name* ^String (.-data.name node)]
     (reset! hovered-node-id nil)
-    (swap! id->node-map
-      (fn [elements id v]
-        (-> elements
+    (swap! elements
+      (fn [elements* id v]
+        (-> elements*
           (assoc-in [id :data :label] v)
           (assoc-in [id :style :zIndex] 3)))
       id
@@ -209,7 +210,7 @@
 (defn- update-nodes-positions [elements]
   (let [width     280
         height    36
-        elements* (vals @id->node-map)
+        elements* (vals (:id->node-map @state*))
         _         (doseq [el elements*]
                     (if (:data el)
                       (.setNode dagre-graph (:id el) (clj->js {:width width :height height}))
@@ -225,11 +226,11 @@
                                                :y (- (.-y node-with-pos) (/ height 2))}))
                         el))
                     elements*)]
-    (reset! elements elements*)))
+    (reset! elements (into {} (map (fn [e] [(:id e) e]) elements*)))))
 
 
 (defn- traverse-path [id]
-  (let [childs (get @fx-handlers id)]
+  (let [childs (get-in @state* [:handlers id])]
     (if childs
       (cons id (mapcat traverse-path childs))
       [id])))
@@ -240,13 +241,17 @@
     (filter #(or (:data %) (sources (:source %))) elements)))
 
 
+(defn- get-nodes [elements]
+  (or (vals @elements) []))
+
+
 (defn- flow-panel []
   (let [handle-keys      (fn [e]
                            (let [tag-name        (.-tagName (.-target e))
                                  entering-input? (contains? #{"INPUT" "SELECT" "TEXTAREA"} tag-name)]
                              (when (and (not entering-input?)
-                                     (= (.-key e) "g")
-                                     (.-ctrlKey e))
+                                        (= (.-key e) "g")
+                                        (.-ctrlKey e))
                                (swap! show-panel? not)
                                (.preventDefault e))))
         hovered-node-id  (r/atom nil)
@@ -260,14 +265,14 @@
                                  (js/window.removeEventListener "keydown" handle-keys))
        :component-will-update (fn []
                                 (when (or (nil? @prev-fx-handlers)
-                                          (not= @prev-fx-handlers @fx-handlers))
-                                  (reset! prev-fx-handlers @fx-handlers)
+                                          (not= @prev-fx-handlers (:handlers @state*)))
+                                  (reset! prev-fx-handlers (:handlers @state*))
                                   (update-nodes-positions elements)))
        :reagent-render (fn []
                          [react-flow-pro
                           [react-flow
-                           {:on-node-mouse-enter (partial on-node-mouse-enter hovered-node-id)
-                            :on-node-mouse-leave (partial on-node-mouse-leave hovered-node-id)
+                           {:on-node-mouse-enter (partial on-node-mouse-enter elements hovered-node-id)
+                            :on-node-mouse-leave (partial on-node-mouse-leave elements hovered-node-id)
                             :default-position [10 10]
                             :style {:width "100%"
                                     :height "100vh"
@@ -281,8 +286,8 @@
                             :snap-to-grid true
                             :snap-grid [15 15]
                             :elements (if @hovered-node-id
-                                        (get-nested-path @hovered-node-id @elements)
-                                        @elements)}
+                                        (get-nested-path @hovered-node-id (get-nodes elements))
+                                        (get-nodes elements))}
                            [controls]
                            [background
                             {:color "#aaa"}]]])})))

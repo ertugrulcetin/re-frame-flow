@@ -1,4 +1,4 @@
-(defproject org.clojars.ertucetin/re-frame-flow "0.1.1"
+(defproject org.clojars.ertucetin/re-frame-flow "0.1.2"
   :description "Graph based visualization tool for Re-frame event chains"
 
   :author "Ertuğrul Çetin"
@@ -7,8 +7,6 @@
 
   :license {:name "MIT License"
             :url "https://opensource.org/licenses/MIT"}
-
-  :dependencies [[thheller/shadow-cljs "2.12.5"]]
 
   :min-lein-version "2.9.0"
 
@@ -19,6 +17,7 @@
   :aliases {"watch" ["with-profile" "dev" "run" "-m" "shadow.cljs.devtools.cli" "watch" "app"]}
 
   :profiles {:dev {:dependencies [[reagent "1.0.0"]
-                                  [re-frame "1.2.0"]]
+                                  [re-frame "1.2.0"]
+                                  [thheller/shadow-cljs "2.12.5"]]
                    :source-paths ["dev"]
                    :resource-paths ["dev/resources"]}})
