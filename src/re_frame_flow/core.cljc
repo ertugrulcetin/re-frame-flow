@@ -226,7 +226,7 @@
                                                :y (- (.-y node-with-pos) (/ height 2))}))
                         el))
                     elements*)]
-    (reset! elements (into {} (map (fn [e] [(:id e) e]) elements*)))))
+    (reset! elements (into {} (map #(vector (:id %) %) elements*)))))
 
 
 (defn- traverse-path [id]
