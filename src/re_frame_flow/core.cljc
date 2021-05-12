@@ -1,8 +1,12 @@
 (ns re-frame-flow.core
   (:require
     [clojure.set :as set]
+    [cljs.reader :as reader]
+    [goog.storage.Storage]
+    [goog.storage.mechanism.HTML5LocalStorage]
     [reagent.core :as r]
     [reagent.dom :as rdom]
+    [re-frame-flow.trace :as flow-trace]
     [re-frame.core :as rf]
     [re-frame.cofx :as cofx]
     [re-frame.events :as events]
@@ -25,12 +29,12 @@
     (conj (-> result :dispatch first))
 
     (:dispatch-n result)
-    (set/union (set (map first (:dispatch-n result))))
+    (set/union (set (map first (remove nil? (:dispatch-n result)))))
 
     (:dispatch-later result)
     (#(if (map? (:dispatch-later result))
         (conj % (-> result :dispatch-later :dispatch first))
-        (set/union % (set (map (comp first :dispatch) (:dispatch-later result))))))
+        (set/union % (set (map (comp first :dispatch) (remove nil? (:dispatch-later result)))))))
 
     (-> result :http :on-success)
     (conj (-> result :http :on-success first))
@@ -57,7 +61,7 @@
     (name id)))
 
 
-(defn- id->node [id]
+(defn- id->node [id dispatch?]
   {:id (kw->str id)
    :style {:fontSize 14
            :fontFamily "monospace"
@@ -65,7 +69,8 @@
            :width 200}
    :data {:label id
           :name (name id)
-          :namespace (namespace id)}
+          :namespace (namespace id)
+          :dispatch dispatch?}
    :sourcePosition "right"
    :targetPosition "left"
    :position {:x 0 :y 0}})
@@ -78,24 +83,24 @@
    :animated true})
 
 
-(defn- create-node-and-edges [handlers]
+(defn- create-node-and-edges [handlers dispatches]
   (reduce-kv
     (fn [acc k v]
-      (let [nodes (map id->node (cons k v))
+      (let [nodes (map #(id->node % (boolean (% dispatches))) (cons k v))
             edges (map ids->edge (repeat k) v)]
         (into acc (concat nodes edges))))
     []
-    handlers))
+    (merge handlers dispatches)))
 
 
-(defn- get-id->node-map [handlers]
-  (let [m      @rg/kind->id->handler
-        fx     (:fx m)
-        events (:event m)]
+(defn- get-id->node-map [{:keys [handlers dispatches kind->id->handler]}]
+  (let [fx     (:fx kind->id->handler)
+        events (:event kind->id->handler)]
     (reduce
       (fn [m e]
         (let [id    (keyword (:id e))
               color (cond
+                      (id dispatches) "orange"
                       (id fx) "red"
                       (= :db-handler (:id (last (id events)))) "#336edc"
                       :else "green")]
@@ -103,7 +108,7 @@
                              (assoc-in [:style :color] color)
                              (assoc-in [:style :border] (str "1px solid " color))))))
       {}
-      (create-node-and-edges handlers))))
+      (create-node-and-edges handlers dispatches))))
 
 
 (set!
@@ -124,7 +129,10 @@
                                 deps   (get-deps result)]
                             (swap! state* (fn [state id v]
                                             (let [state (update-in state [:handlers id] set/union v)]
-                                              (assoc state :id->node-map (get-id->node-map (:handlers state)))))
+                                              (assoc state :id->node-map (get-id->node-map
+                                                                           {:handlers (:handlers state)
+                                                                            :dispatches (:dispatches state)
+                                                                            :kind->id->handler @rg/kind->id->handler}))))
                               id
                               deps))
                           (assoc context :effects result)))]
@@ -165,7 +173,30 @@
 (def background (r/adapt-react-class Background))
 (def controls (r/adapt-react-class Controls))
 
+(def storage (goog.storage.Storage. (goog.storage.mechanism.HTML5LocalStorage.)))
+(def safe-prefix "ertu.re-frame-flow.")
+
+
+(defn- safe-key [key]
+  (str safe-prefix key))
+
+
+(defn load
+  ([key]
+   (load key nil))
+  ([key not-found]
+   (let [value (.get storage (safe-key key))]
+     (if (undefined? value)
+       not-found
+       (reader/read-string value)))))
+
+
+(defn save! [key value]
+  (.set storage (safe-key key) (pr-str value)))
+
+
 (defonce show-panel? (r/atom false))
+(defonce show-dispatches? (r/atom (load "show-dispatches?")))
 
 
 (defn- update-handles-color []
@@ -179,9 +210,10 @@
 
 
 (defn- on-node-mouse-enter [elements hovered-node-id _ node]
-  (let [id    (.-id node)
-        ns*   ^String (.-data.namespace node)
-        name* ^String (.-data.name node)]
+  (let [id        (.-id node)
+        ns*       ^String (.-data.namespace node)
+        name*     ^String (.-data.name node)
+        kw-prefix (if ^String (.-data.dispatch node) "" ":")]
     (reset! hovered-node-id id)
     (swap! elements
       (fn [elements* id v]
@@ -190,8 +222,8 @@
           (assoc-in [id :style :zIndex] 4)))
       id
       (if ns*
-        (str ":" ns* "/" name*)
-        (str ":" name*)))))
+        (str kw-prefix ns* "/" name*)
+        (str kw-prefix name*)))))
 
 
 (defn- on-node-mouse-leave [elements hovered-node-id _ node]
@@ -211,6 +243,11 @@
   (let [width     280
         height    36
         elements* (vals (:id->node-map @state*))
+        elements* (if @show-dispatches?
+                    elements*
+                    (let [dispatch-node-ids (->> elements* (filter (comp :dispatch :data)) (map :id) (set))]
+                      (remove #(or (-> % :data :dispatch)
+                                   (some-> % :source kw->str dispatch-node-ids)) elements*)))
         _         (doseq [el elements*]
                     (if (:data el)
                       (.setNode dagre-graph (:id el) (clj->js {:width width :height height}))
@@ -229,15 +266,22 @@
     (reset! elements (into {} (map #(vector (:id %) %) elements*)))))
 
 
-(defn- traverse-path [id]
-  (let [childs (get-in @state* [:handlers id])]
-    (if childs
-      (cons id (mapcat traverse-path childs))
-      [id])))
+(defn- traverse-path
+  ([m id]
+   (traverse-path m #{} id))
+  ([m state id]
+   (let [childs (id m)]
+     (if (state id)
+       []
+       (if (seq childs)
+         (let [state (conj state id)]
+           (cons id (mapcat #(traverse-path m state %) childs)))
+         [id])))))
 
 
 (defn- get-nested-path [hovered-node-id elements]
-  (let [sources (->> hovered-node-id (keyword) (traverse-path) (map kw->str) (set))]
+  (let [m       (merge (:handlers @state*) (:dispatches @state*))
+        sources (->> hovered-node-id (keyword) (traverse-path m) (map kw->str) (set))]
     (filter #(or (:data %) (sources (:source %))) elements)))
 
 
@@ -250,8 +294,8 @@
                            (let [tag-name        (.-tagName (.-target e))
                                  entering-input? (contains? #{"INPUT" "SELECT" "TEXTAREA"} tag-name)]
                              (when (and (not entering-input?)
-                                        (= (.-key e) "g")
-                                        (.-ctrlKey e))
+                                     (= (.-key e) "g")
+                                     (.-ctrlKey e))
                                (swap! show-panel? not)
                                (.preventDefault e))))
         hovered-node-id  (r/atom nil)
@@ -263,11 +307,11 @@
                               (update-handles-color))
        :component-will-unmount (fn []
                                  (js/window.removeEventListener "keydown" handle-keys))
-       :component-will-update (fn []
-                                (when (or (nil? @prev-fx-handlers)
-                                          (not= @prev-fx-handlers (:handlers @state*)))
-                                  (reset! prev-fx-handlers (:handlers @state*))
-                                  (update-nodes-positions elements)))
+       :component-did-update (fn []
+                               (when (or (nil? @prev-fx-handlers)
+                                       (not= @prev-fx-handlers (:handlers @state*)))
+                                 (reset! prev-fx-handlers (:handlers @state*))
+                                 (update-nodes-positions elements)))
        :reagent-render (fn []
                          [react-flow-pro
                           [react-flow
@@ -289,6 +333,23 @@
                                         (get-nested-path @hovered-node-id (get-nodes elements))
                                         (get-nodes elements))}
                            [controls]
+                           (when (flow-trace/dispatch-trace-enabled?)
+                             [:button
+                              {:style {:bottom "0"
+                                       :position "absolute"
+                                       :margin-left "48px"
+                                       :margin-bottom "12px"
+                                       :z-index "99999"
+                                       :border "1px solid grey"
+                                       :border-radius "2px"
+                                       :font "400 14px Arial"
+                                       :padding "2px 6px"}
+                               :on-click (fn [_]
+                                           (save! "show-dispatches?" (swap! show-dispatches? not))
+                                           (update-nodes-positions elements))}
+                              (if @show-dispatches?
+                                "Hide dispatches"
+                                "Show dispatches")])
                            [background
                             {:color "#aaa"}]]])})))
 

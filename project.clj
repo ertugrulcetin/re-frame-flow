@@ -1,4 +1,4 @@
-(defproject org.clojars.ertucetin/re-frame-flow "0.1.2"
+(defproject org.clojars.ertucetin/re-frame-flow "0.1.3"
   :description "Graph based visualization tool for Re-frame event chains"
 
   :author "Ertuğrul Çetin"
