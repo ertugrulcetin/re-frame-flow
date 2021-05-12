@@ -1,6 +1,9 @@
 (ns re-frame-flow.core
   (:require
     [clojure.set :as set]
+    [cljs.reader :as reader]
+    [goog.storage.Storage]
+    [goog.storage.mechanism.HTML5LocalStorage]
     [reagent.core :as r]
     [reagent.dom :as rdom]
     [re-frame.core :as rf]
@@ -169,8 +172,30 @@
 (def background (r/adapt-react-class Background))
 (def controls (r/adapt-react-class Controls))
 
+(def storage (goog.storage.Storage. (goog.storage.mechanism.HTML5LocalStorage.)))
+(def safe-prefix "ertu.re-frame-flow.")
+
+
+(defn- safe-key [key]
+  (str safe-prefix key))
+
+
+(defn load
+  ([key]
+   (load key nil))
+  ([key not-found]
+   (let [value (.get storage (safe-key key))]
+     (if (undefined? value)
+       not-found
+       (reader/read-string value)))))
+
+
+(defn save! [key value]
+  (.set storage (safe-key key) (pr-str value)))
+
+
 (defonce show-panel? (r/atom false))
-(defonce show-dispatches? (r/atom false))
+(defonce show-dispatches? (r/atom (load "show-dispatches?")))
 
 
 (defn- update-handles-color []
@@ -300,11 +325,12 @@
                            [:button
                             {:style {:bottom "0"
                                      :position "absolute"
-                                     :margin-left "50px"
-                                     :margin-bottom "50px"
+                                     :margin-left "48px"
+                                     :margin-bottom "12px"
                                      :z-index "99999"}
                              :on-click (fn [_]
                                          (swap! show-dispatches? not)
+                                         (save! "show-dispatches?" @show-dispatches?)
                                          (update-nodes-positions elements))}
                             (if @show-dispatches?
                               "Hide dispatches"
