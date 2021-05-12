@@ -66,8 +66,3 @@ If you want to track the flow of `dispatch` and `dispatch-sync`, you need to use
 - `npm install`
 - `lein watch`
 - Open http://localhost:8280
-- Click `Trigger 1` button
-- Press `ctrl-g` (opens the panel)
-- Pres it again (closes the panel)
-- Click `Trigger 2` button
-- Open the panel again (you will notice new events)

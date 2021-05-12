@@ -14,7 +14,8 @@
 
   :source-paths ["src"]
 
-  :aliases {"watch" ["with-profile" "dev" "run" "-m" "shadow.cljs.devtools.cli" "watch" "app"]}
+  :aliases {"watch" ["with-profile" "dev" "run" "-m" "shadow.cljs.devtools.cli" "watch" "app"]
+            "release" ["with-profile" "dev" "run" "-m" "shadow.cljs.devtools.cli" "release" "app"]}
 
   :profiles {:dev {:dependencies [[reagent "1.0.0"]
                                   [re-frame "1.2.0"]

@@ -2,17 +2,28 @@
   (:require
     [re-frame-flow.macros :refer-macros [dispatch]]
     [re-frame.core :refer [subscribe]]
-    [app.events :as events]
-    [app.subs :as subs]))
+    [app.events :as events]))
 
 (defn main-panel []
-  (let [name (subscribe [::subs/name])]
-    [:div
-     [:h1
-      "Hello from " @name]
+  [:div
+   {:style {:font-size "20px"}}
+   [:h1 "Welcome to Re-frame Flow demo"]
+   [:p "Please follow the steps below:"]
+   [:ul
+    [:li
      [:button
-      {:on-click #(dispatch [::events/my-event 1])}
-      "Trigger 1"]
+      {:on-click #(dispatch [::events/my-event 1])
+       :style {:font-size "18px"}}
+      "Click here to trigger some events"]]
+    [:br]
+    [:li
+     "Press " [:code {:style {:background "#c7c4c454"}} "ctrl-g"]]
+    [:br]
+    [:li
      [:button
-      {:on-click #(dispatch [::events/my-event 2])}
-      "Trigger 2"]]))
+      {:on-click #(dispatch [::events/my-event 2])
+       :style {:font-size "18px"}}
+      "Click here to trigger more events..."]]
+    [:br]
+    [:li
+     "Press " [:code {:style {:background "#c7c4c454"}} "ctrl-g"] " again, and you will notice more events"]]])
