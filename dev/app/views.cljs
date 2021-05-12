@@ -14,5 +14,5 @@
       {:on-click #(dispatch [::events/my-event 1])}
       "Trigger 1"]
      [:button
-      {:on-click #(dispatch [::events/my-event (+ 0 (- 3 1))])}
+      {:on-click #(dispatch [::events/my-event 2])}
       "Trigger 2"]]))
