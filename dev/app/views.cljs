@@ -1,8 +1,9 @@
 (ns app.views
   (:require
-   [re-frame.core :refer [dispatch subscribe]]
+   [re-frame.core :refer [subscribe]]
    [app.events :as events]
-   [app.subs :as subs]))
+   [app.subs :as subs])
+  (:require-macros [re-frame-flow.macros :refer [dispatch]]))
 
 (defn main-panel []
   (let [name (subscribe [::subs/name])]
@@ -13,5 +14,5 @@
       {:on-click #(dispatch [::events/my-event 1])}
       "Trigger 1"]
      [:button
-      {:on-click #(dispatch [::events/my-event 2])}
+      {:on-click #(dispatch [::events/my-event (+ 0 (- 3 1))])}
       "Trigger 2"]]))

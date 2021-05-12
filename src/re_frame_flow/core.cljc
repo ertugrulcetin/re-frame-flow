@@ -57,7 +57,7 @@
     (name id)))
 
 
-(defn- id->node [id]
+(defn- id->node [id dispatch?]
   {:id (kw->str id)
    :style {:fontSize 14
            :fontFamily "monospace"
@@ -65,7 +65,8 @@
            :width 200}
    :data {:label id
           :name (name id)
-          :namespace (namespace id)}
+          :namespace (namespace id)
+          :dispatch dispatch?}
    :sourcePosition "right"
    :targetPosition "left"
    :position {:x 0 :y 0}})
@@ -78,24 +79,24 @@
    :animated true})
 
 
-(defn- create-node-and-edges [handlers]
+(defn- create-node-and-edges [handlers dispatches]
   (reduce-kv
     (fn [acc k v]
-      (let [nodes (map id->node (cons k v))
+      (let [nodes (map #(id->node % (boolean (% dispatches))) (cons k v))
             edges (map ids->edge (repeat k) v)]
         (into acc (concat nodes edges))))
     []
-    handlers))
+    (merge handlers dispatches)))
 
 
-(defn- get-id->node-map [handlers]
-  (let [m      @rg/kind->id->handler
-        fx     (:fx m)
-        events (:event m)]
+(defn- get-id->node-map [{:keys [handlers dispatches kind->id->handler]}]
+  (let [fx     (:fx kind->id->handler)
+        events (:event kind->id->handler)]
     (reduce
       (fn [m e]
         (let [id    (keyword (:id e))
               color (cond
+                      (id dispatches) "orange"
                       (id fx) "red"
                       (= :db-handler (:id (last (id events)))) "#336edc"
                       :else "green")]
@@ -103,7 +104,7 @@
                              (assoc-in [:style :color] color)
                              (assoc-in [:style :border] (str "1px solid " color))))))
       {}
-      (create-node-and-edges handlers))))
+      (create-node-and-edges handlers dispatches))))
 
 
 (set!
@@ -124,7 +125,10 @@
                                 deps   (get-deps result)]
                             (swap! state* (fn [state id v]
                                             (let [state (update-in state [:handlers id] set/union v)]
-                                              (assoc state :id->node-map (get-id->node-map (:handlers state)))))
+                                              (assoc state :id->node-map (get-id->node-map
+                                                                           {:handlers (:handlers state)
+                                                                            :dispatches (:dispatches state)
+                                                                            :kind->id->handler @rg/kind->id->handler}))))
                               id
                               deps))
                           (assoc context :effects result)))]
@@ -179,9 +183,10 @@
 
 
 (defn- on-node-mouse-enter [elements hovered-node-id _ node]
-  (let [id    (.-id node)
-        ns*   ^String (.-data.namespace node)
-        name* ^String (.-data.name node)]
+  (let [id        (.-id node)
+        ns*       ^String (.-data.namespace node)
+        name*     ^String (.-data.name node)
+        kw-prefix (if ^String (.-data.dispatch node) "" ":")]
     (reset! hovered-node-id id)
     (swap! elements
       (fn [elements* id v]
@@ -190,8 +195,8 @@
           (assoc-in [id :style :zIndex] 4)))
       id
       (if ns*
-        (str ":" ns* "/" name*)
-        (str ":" name*)))))
+        (str kw-prefix ns* "/" name*)
+        (str kw-prefix name*)))))
 
 
 (defn- on-node-mouse-leave [elements hovered-node-id _ node]
@@ -229,15 +234,16 @@
     (reset! elements (into {} (map #(vector (:id %) %) elements*)))))
 
 
-(defn- traverse-path [id]
-  (let [childs (get-in @state* [:handlers id])]
+(defn- traverse-path [m id]
+  (let [childs (id m)]
     (if childs
-      (cons id (mapcat traverse-path childs))
+      (cons id (mapcat #(traverse-path m %) childs))
       [id])))
 
 
 (defn- get-nested-path [hovered-node-id elements]
-  (let [sources (->> hovered-node-id (keyword) (traverse-path) (map kw->str) (set))]
+  (let [m       (merge (:handlers @state*) (:dispatches @state*))
+        sources (->> hovered-node-id (keyword) (traverse-path m) (map kw->str) (set))]
     (filter #(or (:data %) (sources (:source %))) elements)))
 
 
@@ -250,8 +256,8 @@
                            (let [tag-name        (.-tagName (.-target e))
                                  entering-input? (contains? #{"INPUT" "SELECT" "TEXTAREA"} tag-name)]
                              (when (and (not entering-input?)
-                                        (= (.-key e) "g")
-                                        (.-ctrlKey e))
+                                     (= (.-key e) "g")
+                                     (.-ctrlKey e))
                                (swap! show-panel? not)
                                (.preventDefault e))))
         hovered-node-id  (r/atom nil)
@@ -265,7 +271,7 @@
                                  (js/window.removeEventListener "keydown" handle-keys))
        :component-will-update (fn []
                                 (when (or (nil? @prev-fx-handlers)
-                                          (not= @prev-fx-handlers (:handlers @state*)))
+                                        (not= @prev-fx-handlers (:handlers @state*)))
                                   (reset! prev-fx-handlers (:handlers @state*))
                                   (update-nodes-positions elements)))
        :reagent-render (fn []
