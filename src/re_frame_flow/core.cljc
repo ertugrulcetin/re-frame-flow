@@ -238,12 +238,15 @@
       name*)))
 
 
-;;TODO fix couldn't create edge for source id ERROR
 (defn- update-nodes-positions [elements]
   (let [width     280
         height    36
         elements* (vals (:id->node-map @state*))
-        elements* (if @show-dispatches? elements* (remove (comp :dispatch :data) elements*))
+        elements* (if @show-dispatches?
+                    elements*
+                    (let [dispatch-node-ids (->> elements* (filter (comp :dispatch :data)) (map :id) (set))]
+                      (remove #(or (-> % :data :dispatch)
+                                   (some-> % :source kw->str dispatch-node-ids)) elements*)))
         _         (doseq [el elements*]
                     (if (:data el)
                       (.setNode dagre-graph (:id el) (clj->js {:width width :height height}))
