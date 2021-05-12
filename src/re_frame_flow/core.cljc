@@ -6,6 +6,7 @@
     [goog.storage.mechanism.HTML5LocalStorage]
     [reagent.core :as r]
     [reagent.dom :as rdom]
+    [re-frame-flow.trace :as flow-trace]
     [re-frame.core :as rf]
     [re-frame.cofx :as cofx]
     [re-frame.events :as events]
@@ -332,22 +333,23 @@
                                         (get-nested-path @hovered-node-id (get-nodes elements))
                                         (get-nodes elements))}
                            [controls]
-                           [:button
-                            {:style {:bottom "0"
-                                     :position "absolute"
-                                     :margin-left "48px"
-                                     :margin-bottom "12px"
-                                     :z-index "99999"
-                                     :border "1px solid grey"
-                                     :border-radius "2px"
-                                     :font "400 14px Arial"
-                                     :padding "2px 6px"}
-                             :on-click (fn [_]
-                                         (save! "show-dispatches?" (swap! show-dispatches? not))
-                                         (update-nodes-positions elements))}
-                            (if @show-dispatches?
-                              "Hide dispatches"
-                              "Show dispatches")]
+                           (when (flow-trace/dispatch-trace-enabled?)
+                             [:button
+                              {:style {:bottom "0"
+                                       :position "absolute"
+                                       :margin-left "48px"
+                                       :margin-bottom "12px"
+                                       :z-index "99999"
+                                       :border "1px solid grey"
+                                       :border-radius "2px"
+                                       :font "400 14px Arial"
+                                       :padding "2px 6px"}
+                               :on-click (fn [_]
+                                           (save! "show-dispatches?" (swap! show-dispatches? not))
+                                           (update-nodes-positions elements))}
+                              (if @show-dispatches?
+                                "Hide dispatches"
+                                "Show dispatches")])
                            [background
                             {:color "#aaa"}]]])})))
 

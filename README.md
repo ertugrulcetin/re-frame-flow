@@ -48,7 +48,7 @@ If you want to track the flow of `dispatch` and `dispatch-sync`, you need to use
         :dev
          {:compiler-options
           {:closure-defines
-           {re-frame-flow.macros.dispatch-enabled? true}}}
+           {re-frame-flow.trace.dispatch-enabled? true}}}
       ```
 - Update your views (or any namespace that uses `dispatch`)
     - ```clojure

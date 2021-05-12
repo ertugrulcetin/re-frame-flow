@@ -3,20 +3,15 @@
   (:require
     #?(:clj [net.cgrand.macrovich :as macros])
     [re-frame.core :as rf]
+    [re-frame-flow.trace :as trace]
     [clojure.set :as set]))
-
-#?(:cljs (goog-define dispatch-enabled? false)
-   :clj  (def ^boolean dispatch-enabled? false))
-
-(defn ^boolean dispatch-trace-enabled? []
-  dispatch-enabled?)
 
 (macros/deftime
   (defmacro dispatch
     [event]
     (let [ns' *ns*]
       `(do
-         (when (dispatch-trace-enabled?)
+         (when (trace/dispatch-trace-enabled?)
            (swap! @(resolve 're-frame-flow.core/state*) update-in
              [:dispatches ~(keyword (str ns'))] set/union #{~(first event)}))
          (rf/dispatch ~event))))
@@ -25,7 +20,7 @@
     [event]
     (let [ns' *ns*]
       `(do
-         (when (dispatch-trace-enabled?)
+         (when (trace/dispatch-trace-enabled?)
            (swap! @(resolve 're-frame-flow.core/state*) update-in
              [:dispatches ~(keyword (str ns'))] set/union #{~(first event)}))
          (rf/dispatch-sync ~event)))))
