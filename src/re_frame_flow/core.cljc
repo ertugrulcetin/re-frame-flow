@@ -238,6 +238,7 @@
       name*)))
 
 
+;;TODO fix couldn't create edge for source id ERROR
 (defn- update-nodes-positions [elements]
   (let [width     280
         height    36
@@ -261,11 +262,17 @@
     (reset! elements (into {} (map #(vector (:id %) %) elements*)))))
 
 
-(defn- traverse-path [m id]
-  (let [childs (id m)]
-    (if childs
-      (cons id (mapcat #(traverse-path m %) childs))
-      [id])))
+(defn- traverse-path
+  ([m id]
+   (traverse-path m #{} id))
+  ([m state id]
+   (let [childs (id m)]
+     (if (state id)
+       []
+       (if (seq childs)
+         (let [state (conj state id)]
+           (cons id (mapcat #(traverse-path m state %) childs)))
+         [id])))))
 
 
 (defn- get-nested-path [hovered-node-id elements]
@@ -327,7 +334,11 @@
                                      :position "absolute"
                                      :margin-left "48px"
                                      :margin-bottom "12px"
-                                     :z-index "99999"}
+                                     :z-index "99999"
+                                     :border "1px solid grey"
+                                     :border-radius "2px"
+                                     :font "400 14px Arial"
+                                     :padding "2px 6px"}
                              :on-click (fn [_]
                                          (save! "show-dispatches?" (swap! show-dispatches? not))
                                          (update-nodes-positions elements))}
