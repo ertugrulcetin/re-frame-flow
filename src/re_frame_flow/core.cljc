@@ -28,12 +28,12 @@
     (conj (-> result :dispatch first))
 
     (:dispatch-n result)
-    (set/union (set (map first (:dispatch-n result))))
+    (set/union (set (map first (remove nil? (:dispatch-n result)))))
 
     (:dispatch-later result)
     (#(if (map? (:dispatch-later result))
         (conj % (-> result :dispatch-later :dispatch first))
-        (set/union % (set (map (comp first :dispatch) (:dispatch-later result))))))
+        (set/union % (set (map (comp first :dispatch) (remove nil? (:dispatch-later result)))))))
 
     (-> result :http :on-success)
     (conj (-> result :http :on-success first))
