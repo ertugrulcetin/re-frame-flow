@@ -170,6 +170,7 @@
 (def controls (r/adapt-react-class Controls))
 
 (defonce show-panel? (r/atom false))
+(defonce show-dispatches? (r/atom false))
 
 
 (defn- update-handles-color []
@@ -216,6 +217,7 @@
   (let [width     280
         height    36
         elements* (vals (:id->node-map @state*))
+        elements* (if @show-dispatches? elements* (remove (comp :dispatch :data) elements*))
         _         (doseq [el elements*]
                     (if (:data el)
                       (.setNode dagre-graph (:id el) (clj->js {:width width :height height}))
@@ -295,6 +297,18 @@
                                         (get-nested-path @hovered-node-id (get-nodes elements))
                                         (get-nodes elements))}
                            [controls]
+                           [:button
+                            {:style {:bottom "0"
+                                     :position "absolute"
+                                     :margin-left "50px"
+                                     :margin-bottom "50px"
+                                     :z-index "99999"}
+                             :on-click (fn [_]
+                                         (swap! show-dispatches? not)
+                                         (update-nodes-positions elements))}
+                            (if @show-dispatches?
+                              "Hide dispatches"
+                              "Show dispatches")]
                            [background
                             {:color "#aaa"}]]])})))
 
