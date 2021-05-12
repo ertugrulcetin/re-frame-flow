@@ -296,11 +296,11 @@
                               (update-handles-color))
        :component-will-unmount (fn []
                                  (js/window.removeEventListener "keydown" handle-keys))
-       :component-will-update (fn []
-                                (when (or (nil? @prev-fx-handlers)
-                                        (not= @prev-fx-handlers (:handlers @state*)))
-                                  (reset! prev-fx-handlers (:handlers @state*))
-                                  (update-nodes-positions elements)))
+       :component-did-update (fn []
+                               (when (or (nil? @prev-fx-handlers)
+                                       (not= @prev-fx-handlers (:handlers @state*)))
+                                 (reset! prev-fx-handlers (:handlers @state*))
+                                 (update-nodes-positions elements)))
        :reagent-render (fn []
                          [react-flow-pro
                           [react-flow
@@ -329,8 +329,7 @@
                                      :margin-bottom "12px"
                                      :z-index "99999"}
                              :on-click (fn [_]
-                                         (swap! show-dispatches? not)
-                                         (save! "show-dispatches?" @show-dispatches?)
+                                         (save! "show-dispatches?" (swap! show-dispatches? not))
                                          (update-nodes-positions elements))}
                             (if @show-dispatches?
                               "Hide dispatches"
