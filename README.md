@@ -42,7 +42,8 @@
 ## Dispatch tracking (Optional)
 If you want to track flow of `dispatch` and `dispatch-sync`, you need to use re-frame-flow's custom `dispatch` and `dispatch-sync`. ClojureScript does not provide `*ns*` at runtime, so these functions implemented as custom **macros**. Which means you can't pass like they are functions.
 
-- Update your `closure-defines` inside **shadow-cljs.edn**
+- You need to move `re-frame-flow` dependency dev to **prod**
+- Update your **dev** `closure-defines` inside **shadow-cljs.edn**
     - ```clojure
         :dev
          {:compiler-options

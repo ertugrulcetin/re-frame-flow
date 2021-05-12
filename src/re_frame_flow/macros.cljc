@@ -17,7 +17,8 @@
     (let [ns' *ns*]
       `(do
          (when (dispatch-trace-enabled?)
-             (swap! re-frame-flow.core/state* update-in [:dispatches ~(keyword (str ns'))] set/union #{~(first event)}))
+           (swap! @(resolve 're-frame-flow.core/state*) update-in
+             [:dispatches ~(keyword (str ns'))] set/union #{~(first event)}))
          (rf/dispatch ~event))))
 
   (defmacro dispatch-sync
@@ -25,5 +26,6 @@
     (let [ns' *ns*]
       `(do
          (when (dispatch-trace-enabled?)
-           (swap! re-frame-flow.core/state* update-in [:dispatches ~(keyword (str ns'))] set/union #{~(first event)}))
+           (swap! @(resolve 're-frame-flow.core/state*) update-in
+             [:dispatches ~(keyword (str ns'))] set/union #{~(first event)}))
          (rf/dispatch-sync ~event)))))
