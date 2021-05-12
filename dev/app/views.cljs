@@ -1,9 +1,9 @@
 (ns app.views
   (:require
-   [re-frame.core :refer [subscribe]]
-   [app.events :as events]
-   [app.subs :as subs])
-  (:require-macros [re-frame-flow.macros :refer [dispatch]]))
+    [re-frame-flow.macros :refer-macros [dispatch]]
+    [re-frame.core :refer [subscribe]]
+    [app.events :as events]
+    [app.subs :as subs]))
 
 (defn main-panel []
   (let [name (subscribe [::subs/name])]

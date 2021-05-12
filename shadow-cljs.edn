@@ -16,4 +16,4 @@
         :modules {:app {:init-fn app.core/init}}
         :devtools {:preloads [re-frame-flow.preload]}
         :dev {:compiler-options
-              {:closure-defines {}}}}}}
+              {:closure-defines {re-frame-flow.macros.dispatch-enabled? true}}}}}}

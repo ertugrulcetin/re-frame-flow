@@ -39,6 +39,23 @@
 - Once it is loaded, trigger some events (Flow panel gets updated when an event is triggered).
 - Focus the document window and press **ctrl-g** to open the flow panel.
 
+## Dispatch tracking (Optional)
+If you want to track flow of `dispatch` and `dispatch-sync`, you need to use re-frame-flow's custom `dispatch` and `dispatch-sync`. ClojureScript does not provide `*ns*` at runtime, so these functions implemented as custom **macros**. Which means you can't pass like they are functions.
+
+- Update your `closure-defines` inside **shadow-cljs.edn**
+    - ```clojure
+        :dev
+         {:compiler-options
+          {:closure-defines
+           {re-frame-flow.macros.dispatch-enabled? true}}}
+      ```
+- Update your views (or any namespace that uses `dispatch`)
+    - ```clojure
+      (ns app.views
+       (:require [re-frame-flow.macros :refer-macros [dispatch dispatch-sync]]
+        ...))
+      ```
+
 ## Live Demo
 
 - [Re-frame Flow Demo](https://ertugrulcetin.github.io/re-frame-flow-demo/index.html)
