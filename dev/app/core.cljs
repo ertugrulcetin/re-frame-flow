@@ -4,8 +4,7 @@
    [re-frame.core :as re-frame]
    [app.events :as events]
    [app.views :as views]
-   [app.config :as config]
-   [re-frame-flow.core :as re-flow]))
+   [app.config :as config]))
 
 
 (defn dev-setup []
@@ -14,7 +13,6 @@
 
 (defn ^:dev/after-load mount-root []
   (re-frame/clear-subscription-cache!)
-  (re-flow/clear-cache!)
   (let [root-el (.getElementById js/document "app")]
     (rdom/unmount-component-at-node root-el)
     (rdom/render [views/main-panel] root-el)))
