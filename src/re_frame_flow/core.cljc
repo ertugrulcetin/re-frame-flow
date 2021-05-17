@@ -156,7 +156,7 @@
                           ((resolve 'fx-handler->interceptor) id handler)]))))
 
 
-(defn clear-cache! []
+(defn ^:dev/after-load clear-cache! []
   (reset! state* {})
   (reset! elements {}))
 

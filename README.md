@@ -23,16 +23,6 @@
  ...}
 ```
 
-- Update **^:dev/after-load** (if you're not using hot-reload, you can ignore this part):
-```clojure
-(ns my-app.core
-  (:require [re-frame-flow.core :as re-flow]))
-
-(defn ^:dev/after-load mount-root []
-  (re-flow/clear-cache!)
-  ...)
-```
-
 ## Usage
 - Make sure you have followed all of the installation instructions above.
 - Start up your application.
