@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file. This change
 ## [0.1.3] - 2021-05-12
 
 ### Added
-- `dispatch` and `dispatch-n` trace support 
+- `dispatch` and `dispatch-sync` trace support 
 
 ### Fixed
 
